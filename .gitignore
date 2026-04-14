@@ -36,3 +36,7 @@ pip-delete-this-directory.txt
 
 # Mac OS
 .DS_Store
+
+# Claude
+.claude/
+claude.md
