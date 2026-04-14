@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68.0", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "primerviz"
+version = "0.1.0"
+description = "CLI tool for visualizing primer binding, Tm, and thermodynamic properties"
+requires-python = ">=3.10"
+dependencies = [
+    "click>=8.0",
+    "primer3-py>=2.0",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+]
+
+[project.scripts]
+primerviz = "primerviz.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
