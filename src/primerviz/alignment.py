@@ -23,23 +23,30 @@ def find_binding_sites(
     template_seq: str,
     max_mismatches: int = 0,
 ) -> list[BindingSite]:
-    """Slide primer along the template (both strands) and find binding sites.
+    """Slide primer along both strands of the template to find binding sites.
 
-    For forward primers: match directly against the sense strand (5'→3').
-    For reverse primers: reverse-complement the primer, then match against
-    the sense strand — the binding position is where the RC'd primer aligns.
+    The primer's direction label (-f / -r) is user metadata for naming only.
+    Actual binding orientation is determined by which form matches:
+
+      strand=FORWARD  — primer sequence matches the sense strand directly
+                        (primer anneals to antisense strand, extends →)
+      strand=REVERSE  — primer's RC matches the sense strand
+                        (primer anneals to sense strand, extends ←)
+
+    Both orientations are always searched so that mislabelled or ambiguous
+    primers are still found.
     """
     template = template_seq.upper()
     seq = primer.sequence.upper()
-
-    if primer.direction == Direction.REVERSE:
-        seq = reverse_complement(seq)
+    seq_rc = reverse_complement(seq)
 
     plen = len(seq)
     sites: list[BindingSite] = []
 
     for i in range(len(template) - plen + 1):
         window = template[i : i + plen]
+
+        # Check sense-strand match (primer binds antisense strand)
         n_mis, mis_pos = _count_mismatches(seq, window)
         if n_mis <= max_mismatches:
             sites.append(
@@ -48,7 +55,25 @@ def find_binding_sites(
                     start=i,
                     end=i + plen,
                     mismatches=n_mis,
+                    strand=Direction.FORWARD,
                     mismatch_positions=mis_pos,
+                )
+            )
+            # If both orientations match at the same position (palindrome),
+            # only record the forward match to avoid a duplicate.
+            continue
+
+        # Check antisense-strand match (primer RC matches sense strand)
+        n_mis_rc, mis_pos_rc = _count_mismatches(seq_rc, window)
+        if n_mis_rc <= max_mismatches:
+            sites.append(
+                BindingSite(
+                    primer=primer,
+                    start=i,
+                    end=i + plen,
+                    mismatches=n_mis_rc,
+                    strand=Direction.REVERSE,
+                    mismatch_positions=mis_pos_rc,
                 )
             )
 
