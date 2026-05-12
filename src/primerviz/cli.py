@@ -8,9 +8,21 @@ import click
 
 from .alignment import find_binding_sites
 from .analysis import analyze_primer, calc_primer_dimer, run_qpcr_checks
-from .io import read_sequence_input
+from .io import invalid_bases, read_sequence_input
 from .models import AnalysisResult, Direction, Primer
 from .visualize import render
+
+
+def _check_seq(label: str, seq: str, param: str) -> None:
+    bad = invalid_bases(seq)
+    if not bad:
+        return
+    pos, base = bad[0]
+    extra = f" (and {len(bad) - 1} more)" if len(bad) > 1 else ""
+    raise click.BadParameter(
+        f"invalid base '{base}' at position {pos}{extra} — only A, C, G, T are allowed.",
+        param_hint=f"--{param} '{label}'",
+    )
 
 
 @click.command()
@@ -56,16 +68,20 @@ def main(
         raise click.UsageError("At least one --forward or --reverse primer is required.")
 
     templates = read_sequence_input(template)
+    for tpl_name, tpl_seq in templates:
+        _check_seq(tpl_name, tpl_seq, "template")
 
     # Build primer objects
     primers: list[Primer] = []
     for i, fwd_val in enumerate(forward):
         for name, seq in read_sequence_input(fwd_val):
             label = name if name != "input" else f"fwd_{i + 1}"
+            _check_seq(label, seq, "forward")
             primers.append(Primer(name=label, sequence=seq, direction=Direction.FORWARD))
     for i, rev_val in enumerate(reverse):
         for name, seq in read_sequence_input(rev_val):
             label = name if name != "input" else f"rev_{i + 1}"
+            _check_seq(label, seq, "reverse")
             primers.append(Primer(name=label, sequence=seq, direction=Direction.REVERSE))
 
     # Build probe object (if supplied)
@@ -74,6 +90,7 @@ def main(
         records = read_sequence_input(probe)
         name, seq = records[0]
         label = name if name != "input" else "probe"
+        _check_seq(label, seq, "probe")
         probe_primer = Primer(name=label, sequence=seq, direction=Direction.FORWARD)
 
     for tpl_name, tpl_seq in templates:

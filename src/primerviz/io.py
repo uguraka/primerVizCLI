@@ -45,3 +45,8 @@ def read_sequence_input(value: str) -> list[tuple[str, str]]:
 
     # Raw sequence string
     return [("input", value.upper())]
+
+
+def invalid_bases(seq: str) -> list[tuple[int, str]]:
+    """Return (1-based position, base) for every non-ACGT character in seq."""
+    return [(i + 1, b) for i, b in enumerate(seq) if b not in "ACGT"]
